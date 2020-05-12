@@ -1,0 +1,6 @@
+-lib heaps
+-lib hlsdl
+-cp src
+-D analyzer-optimize
+-main Main
+--hl main.hl
