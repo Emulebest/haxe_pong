@@ -5,8 +5,9 @@ import hxd.App;
 import objects.GameObject;
 
 class Main extends hxd.App {
-	public static var objects: Array<GameObject> = [];
-	var collisionSystem: CollisionSystem;
+	public static var objects:Array<GameObject> = [];
+
+	var collisionSystem:CollisionSystem;
 
 	override function init() {
 		collisionSystem = new CollisionSystem();
@@ -14,9 +15,9 @@ class Main extends hxd.App {
 		Square.create(s2d, 0, 0, true);
 	}
 
-    override function update(dt:Float) {
+	override function update(dt:Float) {
 		collisionSystem.update(dt);
-        for (obj in objects) {
+		for (obj in objects) {
 			obj.update(dt);
 		}
 	}
