@@ -2,21 +2,33 @@ package physics;
 
 import components.Sprite;
 
-class DiagonalMovement implements MovementPhysics {
-    var dx = 2;
-    var dy = 2;
+typedef InitialDirection<T> = {
+    dx: T,
+    dy: T
+}
 
-    public function new() {
+class DiagonalMovement<T> implements MovementPhysics {
+    var dx: T;
+    var dy: T;
 
+    public function new(initialDirection: InitialDirection<T>) {
+        this.dx = initialDirection.dx;
+        this.dy = initialDirection.dy;
+    }
+
+    public function invertMovement(): Void {
+        var currentDy = cast(dy, Float);
+        var negativeDy = -currentDy;
+        dy = cast negativeDy;
     }
 
     public function update(dt: Float, sprite: Sprite): Void {
-        sprite.bitmap.x += dx;
-        sprite.bitmap.y += dy;
+        sprite.bitmap.x += cast(dx, Float);
+        sprite.bitmap.y += cast(dy, Float);
     }
 
     public function stop(): Void {
-        dx = 0;
-        dy = 0;
+        dx = cast 0;
+        dy = cast 0;
     }
 }

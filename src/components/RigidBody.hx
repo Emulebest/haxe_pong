@@ -7,7 +7,7 @@ class RigidBody extends Component {
     var movementPhysics: MovementPhysics;
 
 
-    public function new(attachee: GameObject, movementType: MovementType) {
+    public function new<T>(attachee: GameObject, movementType: MovementType<T>) {
         super(attachee);
         type = "rigid body";
         movementPhysics = MovementFactory.create(movementType);
@@ -15,6 +15,10 @@ class RigidBody extends Component {
 
     public function stop() {
         movementPhysics.stop();
+    }
+
+    public function invertMovement() {
+        movementPhysics.invertMovement();
     }
 
     public override function update(dt: Float) {

@@ -15,6 +15,10 @@ class GravityMovement implements MovementPhysics {
         gravity.y = 10;
     }
 
+    public function invertMovement(): Void {
+        
+    }
+
     public function update(dt: Float, sprite: Sprite) {
         sprite.bitmap.x += velocity.x * dt;
         sprite.bitmap.y += velocity.y * dt;
