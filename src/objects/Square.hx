@@ -1,5 +1,6 @@
 package objects;
 
+import physics.MovementPhysics.MovementType;
 import utils.CollisionSystem;
 import components.RigidBody;
 import components.SimpleCollider;
@@ -12,7 +13,7 @@ class Square extends GameObject {
 
     public static function create(scene: h2d.Scene, ?x: Int = 0, ?y: Int = 0, gravityAffected: Bool): Square {
         var square = new Square(scene, x, y);
-        var rigidBody = new RigidBody(square, gravityAffected);
+        var rigidBody = new RigidBody(square, MovementType.Gravity(gravityAffected));
         var sprite = new Sprite(square);
         var collider = new SimpleCollider(square);
         var components = new List<components.IComponent>();

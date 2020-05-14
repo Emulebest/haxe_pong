@@ -11,7 +11,7 @@ class Main extends hxd.App {
 
 	override function init() {
 		collisionSystem = new CollisionSystem();
-		Square.create(s2d, 0, 200, false);
+		Square.create(s2d, 500, 500, false);
 		Square.create(s2d, 0, 0, true);
 	}
 
