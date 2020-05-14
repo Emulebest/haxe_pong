@@ -245,6 +245,7 @@ Main.prototype = $extend(hxd_App.prototype,{
 		this.collisionSystem = new utils_CollisionSystem();
 		objects_Square.create(this.s2d,0,200,false);
 		objects_Square.create(this.s2d,0,0,true);
+		objects_Ball.create(this.s2d,700,500,{ dx : -2, dy : -2});
 	}
 	,update: function(dt) {
 		this.collisionSystem.update(dt);
@@ -502,32 +503,23 @@ components_Component.prototype = {
 	}
 	,__class__: components_Component
 };
-var components_RigidBody = function(attachee,gravityAttached) {
-	if(gravityAttached == null) {
-		gravityAttached = false;
-	}
+var components_RigidBody = function(attachee,movementType) {
 	components_Component.call(this,attachee);
 	this.type = "rigid body";
-	this.velocity = new utils_Vector2();
-	this.gravity = new utils_Vector2();
-	this.gravity.y = 10;
-	this.gravityAttached = gravityAttached;
+	this.movementPhysics = physics_MovementFactory.create(movementType);
 };
 components_RigidBody.__name__ = "components.RigidBody";
 components_RigidBody.__super__ = components_Component;
 components_RigidBody.prototype = $extend(components_Component.prototype,{
-	update: function(dt) {
+	stop: function() {
+		this.movementPhysics.stop();
+	}
+	,invertMovement: function() {
+		this.movementPhysics.invertMovement();
+	}
+	,update: function(dt) {
 		var sprite = js_Boot.__cast(this.attachee.getComponent("sprite") , components_Sprite);
-		var _g = sprite.bitmap;
-		_g.posChanged = true;
-		_g.x += this.velocity.x * dt;
-		var _g1 = sprite.bitmap;
-		_g1.posChanged = true;
-		_g1.y += this.velocity.y * dt;
-		if(this.gravityAttached) {
-			this.velocity.x += this.gravity.x * dt;
-			this.velocity.y += this.gravity.y * dt;
-		}
+		this.movementPhysics.update(dt,sprite);
 	}
 	,__class__: components_RigidBody
 });
@@ -539,16 +531,14 @@ components_SimpleCollider.__name__ = "components.SimpleCollider";
 components_SimpleCollider.__super__ = components_Component;
 components_SimpleCollider.prototype = $extend(components_Component.prototype,{
 	collidedWith: function(collider) {
-		var rigidBody = js_Boot.__cast(this.attachee.getComponent("rigid body") , components_RigidBody);
-		rigidBody.gravity = new utils_Vector2();
-		rigidBody.velocity = new utils_Vector2();
+		(js_Boot.__cast(this.attachee.getComponent("rigid body") , components_RigidBody)).stop();
 	}
 	,__class__: components_SimpleCollider
 });
-var components_Sprite = function(attachee) {
+var components_Sprite = function(attachee,size) {
 	components_Component.call(this,attachee);
 	this.type = "sprite";
-	this.bitmap = new h2d_Bitmap(h2d_Tile.fromColor(16711680,60,60));
+	this.bitmap = new h2d_Bitmap(h2d_Tile.fromColor(16711680,size,size));
 	var _this = this.bitmap;
 	_this.posChanged = true;
 	_this.x = attachee.object.x;
@@ -560,6 +550,24 @@ components_Sprite.__name__ = "components.Sprite";
 components_Sprite.__super__ = components_Component;
 components_Sprite.prototype = $extend(components_Component.prototype,{
 	__class__: components_Sprite
+});
+var components_WallCollider = function(attachee) {
+	components_Component.call(this,attachee);
+};
+components_WallCollider.__name__ = "components.WallCollider";
+components_WallCollider.__super__ = components_Component;
+components_WallCollider.prototype = $extend(components_Component.prototype,{
+	update: function(dt) {
+		var sprite = js_Boot.__cast(this.attachee.getComponent("sprite") , components_Sprite);
+		var rigidBody = js_Boot.__cast(this.attachee.getComponent("rigid body") , components_RigidBody);
+		if(sprite.bitmap.y >= this.attachee.scene.height || sprite.bitmap.y <= 0) {
+			rigidBody.invertMovement();
+		}
+		if(sprite.bitmap.x >= this.attachee.scene.width || sprite.bitmap.x <= 0) {
+			rigidBody.stop();
+		}
+	}
+	,__class__: components_WallCollider
 });
 var format_gif_Block = $hxEnums["format.gif.Block"] = { __ename__ : true, __constructs__ : ["BFrame","BExtension","BEOF"]
 	,BFrame: ($_=function(frame) { return {_hx_index:0,frame:frame,__enum__:"format.gif.Block",toString:$estr}; },$_.__params__ = ["frame"],$_)
@@ -51465,6 +51473,40 @@ objects_GameObject.prototype = {
 	}
 	,__class__: objects_GameObject
 };
+var objects_Ball = function(scene,x,y) {
+	if(y == null) {
+		y = 0;
+	}
+	if(x == null) {
+		x = 0;
+	}
+	objects_GameObject.call(this,scene,x,y);
+};
+objects_Ball.__name__ = "objects.Ball";
+objects_Ball.create = function(scene,x,y,initialDeltas) {
+	if(y == null) {
+		y = 0;
+	}
+	if(x == null) {
+		x = 0;
+	}
+	var ball = new objects_Ball(scene,x,y);
+	var rigidBody = new components_RigidBody(ball,physics_MovementType.Diagonal(initialDeltas));
+	var sprite = new components_Sprite(ball,10);
+	var collider = new components_SimpleCollider(ball);
+	var wallCollider = new components_WallCollider(ball);
+	var components1 = new haxe_ds_List();
+	components1.push(rigidBody);
+	components1.push(sprite);
+	components1.push(collider);
+	components1.push(wallCollider);
+	ball.addComponents(components1);
+	return ball;
+};
+objects_Ball.__super__ = objects_GameObject;
+objects_Ball.prototype = $extend(objects_GameObject.prototype,{
+	__class__: objects_Ball
+});
 var objects_Square = function(scene,x,y) {
 	if(y == null) {
 		y = 0;
@@ -51483,8 +51525,8 @@ objects_Square.create = function(scene,x,y,gravityAffected) {
 		x = 0;
 	}
 	var square = new objects_Square(scene,x,y);
-	var rigidBody = new components_RigidBody(square,gravityAffected);
-	var sprite = new components_Sprite(square);
+	var rigidBody = new components_RigidBody(square,physics_MovementType.Gravity(gravityAffected));
+	var sprite = new components_Sprite(square,60);
 	var collider = new components_SimpleCollider(square);
 	var components1 = new haxe_ds_List();
 	components1.push(rigidBody);
@@ -51497,6 +51539,80 @@ objects_Square.__super__ = objects_GameObject;
 objects_Square.prototype = $extend(objects_GameObject.prototype,{
 	__class__: objects_Square
 });
+var physics_MovementPhysics = function() { };
+physics_MovementPhysics.__name__ = "physics.MovementPhysics";
+physics_MovementPhysics.__isInterface__ = true;
+physics_MovementPhysics.prototype = {
+	__class__: physics_MovementPhysics
+};
+var physics_DiagonalMovement = function(initialDirection) {
+	this.dx = initialDirection.dx;
+	this.dy = initialDirection.dy;
+};
+physics_DiagonalMovement.__name__ = "physics.DiagonalMovement";
+physics_DiagonalMovement.__interfaces__ = [physics_MovementPhysics];
+physics_DiagonalMovement.prototype = {
+	invertMovement: function() {
+		this.dy = -js_Boot.__cast(this.dy , Float);
+	}
+	,update: function(dt,sprite) {
+		var _g = sprite.bitmap;
+		_g.posChanged = true;
+		_g.x += js_Boot.__cast(this.dx , Float);
+		var _g1 = sprite.bitmap;
+		_g1.posChanged = true;
+		_g1.y += js_Boot.__cast(this.dy , Float);
+	}
+	,stop: function() {
+		this.dx = 0;
+		this.dy = 0;
+	}
+	,__class__: physics_DiagonalMovement
+};
+var physics_GravityMovement = function(gravityAttached) {
+	this.gravityAttached = gravityAttached;
+	this.velocity = new utils_Vector2();
+	this.gravity = new utils_Vector2();
+	this.gravity.y = 10;
+};
+physics_GravityMovement.__name__ = "physics.GravityMovement";
+physics_GravityMovement.__interfaces__ = [physics_MovementPhysics];
+physics_GravityMovement.prototype = {
+	invertMovement: function() {
+	}
+	,update: function(dt,sprite) {
+		var _g = sprite.bitmap;
+		_g.posChanged = true;
+		_g.x += this.velocity.x * dt;
+		var _g1 = sprite.bitmap;
+		_g1.posChanged = true;
+		_g1.y += this.velocity.y * dt;
+		if(this.gravityAttached) {
+			this.velocity.x += this.gravity.x * dt;
+			this.velocity.y += this.gravity.y * dt;
+		}
+	}
+	,stop: function() {
+		this.gravity = new utils_Vector2();
+		this.velocity = new utils_Vector2();
+	}
+	,__class__: physics_GravityMovement
+};
+var physics_MovementType = $hxEnums["physics.MovementType"] = { __ename__ : true, __constructs__ : ["Gravity","Diagonal"]
+	,Gravity: ($_=function(gravityAttached) { return {_hx_index:0,gravityAttached:gravityAttached,__enum__:"physics.MovementType",toString:$estr}; },$_.__params__ = ["gravityAttached"],$_)
+	,Diagonal: ($_=function(initialDirection) { return {_hx_index:1,initialDirection:initialDirection,__enum__:"physics.MovementType",toString:$estr}; },$_.__params__ = ["initialDirection"],$_)
+};
+physics_MovementType.__empty_constructs__ = [];
+var physics_MovementFactory = function() { };
+physics_MovementFactory.__name__ = "physics.MovementFactory";
+physics_MovementFactory.create = function(type) {
+	switch(type._hx_index) {
+	case 0:
+		return new physics_GravityMovement(type.gravityAttached);
+	case 1:
+		return new physics_DiagonalMovement(type.initialDirection);
+	}
+};
 var utils_CollisionSystem = function() {
 };
 utils_CollisionSystem.__name__ = "utils.CollisionSystem";
